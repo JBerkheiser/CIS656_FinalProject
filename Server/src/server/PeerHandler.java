@@ -13,23 +13,17 @@ class PeerHandler implements Runnable {
 
     private final Socket peerSocket;
 
-    //constructor
+    // Constructor
     public PeerHandler(Socket peerSocket) {
         this.peerSocket = peerSocket;
     }
 
     /**
-     * Handles client connections and interactions for each <b>peer</b>.
-     * <p>
-     * This method registers the peer with the central server, provides it
-     * with a random peer for connection (if available), and listens for
-     * commands from the peer. Currently supported commands include:
-     *  <ul>
-     *     <li><b>"quit"</b>: Removes the peer from the network and terminates the connection.</li>
-     * </ul>
-     * <p>
-     * Each instance of ClientHandler operates in its own thread, allowing
-     * the central server to handle multiple peers concurrently.
+     * Handles client connections and interactions for each peer.
+     * Registers the peer with the central server, provides it with a random
+     * peer for connection (if available), and listens for commands from the peer.
+     * Supported commands include:
+     * - "quit": Removes the peer from the network and terminates the connection.
      */
     @Override
     public void run() {
@@ -38,16 +32,29 @@ class PeerHandler implements Runnable {
         try (BufferedReader input = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
              BufferedWriter output = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()))) {
 
-            // Register the peer with the server
-            Central_Server.addPeer(peerAddress);
-            LOGGER.info("Peer joined: " + peerAddress);
+            // Read the peer's listener port from the input stream
+            String portLine = input.readLine();
+            int peerListenerPort = Integer.parseInt(portLine);
 
-            // Provide a random peer or status message
-            InetSocketAddress randomPeer = Central_Server.getRandomPeer(peerAddress);
+            // Registering the peer with the Central Server
+            Central_Server.addPeer(peerSocket, peerListenerPort);
+            LOGGER.info("Peer joined: " + peerAddress + " (is listening on port " + peerListenerPort + ") for peer connections");
+
+            // Provide a random peer's listener port or status message
+            PeerInfoRecord randomPeer = Central_Server.getRandomPeer(peerAddress);
             if (randomPeer != null) {
-                output.write("Connect to: " + randomPeer.getHostString() + " " + randomPeer.getPort() + "\n");
-                LOGGER.info("Sent random peer to " + peerAddress + ": " + randomPeer);
+                // Validate the random peer's details
+                if (randomPeer.peerListenerPort() <= 0 || randomPeer.peerListenerPort() > 65535) {
+                    LOGGER.warning("Invalid random peer retrieved: " + randomPeer);
+                    output.write("Error: Invalid peer details.\n");
+                } else {
+                    // Send the random peer's listener port to the connecting peer
+                    String connectMessage = "Connect to: " + randomPeer.address().getHostAddress() + " " + randomPeer.peerListenerPort();
+                    output.write(connectMessage + "\n");
+                    LOGGER.info("Sent random peer to " + peerAddress + ": " + connectMessage);
+                }
             } else {
+                // No other peers available
                 output.write("You are the first peer in the network.\n");
                 LOGGER.info("First peer in the network: " + peerAddress);
             }
@@ -62,25 +69,34 @@ class PeerHandler implements Runnable {
                     LOGGER.info("Peer disconnecting: " + peerAddress);
                     Central_Server.removePeer(peerAddress);
                     break;
+                } else {
+                    LOGGER.warning("Unknown command from peer: " + command);
                 }
             }
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error handling peer: " + peerAddress, e);
         } finally {
-            try {
-                peerSocket.close();
-                LOGGER.info("Closed connection for peer: " + peerAddress);
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Error closing client socket for peer: " + peerAddress, e);
-            }
+            cleanup(peerAddress);
         }
     }
 
     /**
-     * Initializes the logger for the ClientHandler class.
-     * <p>
-     * See server-logs.txt for output (ignore the server-logs.txt.lck file it is removed after the server shuts down
-     * </p>
+     * Cleans up the connection and removes the peer from the network.
+     *
+     * @param peerAddress The address of the peer to clean up.
+     */
+    private void cleanup(InetSocketAddress peerAddress) {
+        try {
+            Central_Server.removePeer(peerAddress);
+            peerSocket.close();
+            LOGGER.info("Closed connection for peer: " + peerAddress);
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Error closing client socket for peer: " + peerAddress, e);
+        }
+    }
+
+    /**
+     * Initializes the logger for the PeerHandler class.
      */
     private static void initializeLogger() {
         try {
@@ -89,7 +105,7 @@ class PeerHandler implements Runnable {
             LOGGER.addHandler(fileHandler);
 
             Logger rootLogger = Logger.getLogger("");
-            rootLogger.removeHandler(rootLogger.getHandlers()[0]); //removes logging in the server console
+            rootLogger.removeHandler(rootLogger.getHandlers()[0]); // Removes logging in the server console
 
             LOGGER.setLevel(Level.INFO);
         } catch (IOException e) {

@@ -47,7 +47,7 @@ public class Central_Server {
      */
     public static void notifyAllPeers(String message) {
         for (PeerInfoRecord peerInfo : connectedPeers.values()) {
-            try (Socket peerSocket = new Socket(peerInfo.address(), peerInfo.peerListenerPort());
+            try (Socket peerSocket = new Socket(peerInfo.getAddress(), peerInfo.getPeerListenerPort());
                  BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()))) {
 
                 // Send the notification message

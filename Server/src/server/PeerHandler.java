@@ -44,12 +44,12 @@ class PeerHandler implements Runnable {
             PeerInfoRecord randomPeer = Central_Server.getRandomPeer(peerAddress);
             if (randomPeer != null) {
                 // Validate the random peer's details
-                if (randomPeer.peerListenerPort() <= 0 || randomPeer.peerListenerPort() > 65535) {
+                if (randomPeer.getPeerListenerPort() <= 0 || randomPeer.getPeerListenerPort() > 65535) {
                     LOGGER.warning("Invalid random peer retrieved: " + randomPeer);
                     output.write("Error: Invalid peer details.\n");
                 } else {
                     // Send the random peer's listener port to the connecting peer
-                    String connectMessage = "Connect to: " + randomPeer.address().getHostAddress() + " " + randomPeer.peerListenerPort();
+                    String connectMessage = "Connect to: " + randomPeer.getAddress().getHostAddress()+ " " + randomPeer.getPeerListenerPort();
                     output.write(connectMessage + "\n");
                     LOGGER.info("Sent random peer to " + peerAddress + ": " + connectMessage);
                 }

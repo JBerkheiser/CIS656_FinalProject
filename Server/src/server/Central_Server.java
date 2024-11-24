@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 public class Central_Server {
     static int serverPort = 9090;
@@ -155,7 +156,7 @@ public class Central_Server {
                             key.getAddress().equals(excludingPeer.getAddress()));
                 })
                 .map(Map.Entry::getValue) // Extract the PeerInfoRecord values
-                .toList();
+                .collect(Collectors.toList());
 
         // Return null if no other peers are available
         if (availablePeers.isEmpty()) {

@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 public class Peer {
     private static final int serverPort = 9090; // Central server port
     //TODO explicitly name the serverIPAddress by prompting the user for input
-    private static final String serverIPAddress = "127.0.0.1"; // Central server IP address
+    private static String serverIPAddress; // Central server IP address
     private static int peerPort; // Port for this peer's own server
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(10); // Thread pool for peer connections
     private static final ConcurrentHashMap<InetSocketAddress, Socket> neighbors = new ConcurrentHashMap<>();
@@ -21,7 +21,11 @@ public class Peer {
     private static final String RESET_FORMATTING = "\u001B[0m";
 
     public static void main(String[] args) {
-        try {
+        try (BufferedReader consoleInput = new BufferedReader(new InputStreamReader(System.in))) {
+
+            System.out.print("Enter the IP address of the server: ");
+            serverIPAddress = consoleInput.readLine().trim();
+
             // Allow peer to specify its own port in the terminal
             if (args.length > 0) {
                 peerPort = Integer.parseInt(args[0]);
